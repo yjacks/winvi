@@ -1,16 +1,16 @@
 # 一个命令行文本处理软件
 # coding:utf8
+# encoding:utf8
 import sys  # 需要用到两个函数
 from os import makedirs
 from os.path import exists, abspath
 
 command = sys.argv  # 获取命令行
-m = command[1]
 """
 通过报出错误的方式进行隐式判断
 """
 try:
-    command[1]
+    m=command[1]
 except IndexError:
     print("没有文件可供打开")
     sys.exit()
@@ -29,11 +29,13 @@ h = '''
     欢迎使用WinVi
     ⚠警告！请不要用该工具打开二进制文件，否则后果自负！
     ⚠警告！已知Bug:再多次按:S时，会多次将内容复制,然后写入到文件，不会刷新缓存。
+    ⚠警告！编码为UTF-8无法更改
     按:S以保存进度,按:X以退出,
     按:N以跳行修改文件,按:D以清空文件
     按:R以清除缓存,按:P输出当前内容
     按:PA输出索引与内容,按:G手动缓存文件内容至缓存
     按:O以另存为,按:C以清除行,按:PH查看当前路径
+    按:PL输出完整列表
 '''
 s = -1
 fl = False
@@ -52,13 +54,22 @@ while True:
             s = -1
             for bv in l:
                 s += 1
-                print(str(s) + "    " + bv)
+                print(str(s) + "    " + bv,end='')
         else:
             s = None
             print("无内容")
 
-    elif i == ':P':
+    elif i == ':PL':
         print(l)
+
+    elif i == ':P':
+        if l:
+            l = l
+            for bv in l:
+                print(bv,end='')
+        else:
+            s = None
+            print("无内容")
 
     elif i == ':X':
         sys.exit()
