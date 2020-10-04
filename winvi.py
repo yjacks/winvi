@@ -64,14 +64,13 @@ while True:
 
     elif i == ':P':
         if l:
-            l = l
             for bv in l:
                 print(bv,end='')
         else:
-            s = None
             print("无内容")
 
     elif i == ':X':
+        print("正在退出")
         sys.exit()
 
     elif i == ':D':
