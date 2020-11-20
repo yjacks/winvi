@@ -1,10 +1,11 @@
-# 一个命令行文本处理软件
+﻿# 一个命令行文本处理软件
 # coding:utf8
 # encoding:utf8
 import sys  # 需要用到两个函数
-from os import makedirs
+from os import makedirs,popen
 from os.path import exists, abspath
 
+s=''
 command = sys.argv  # 获取命令行
 """
 通过报出错误的方式进行隐式判断
@@ -155,6 +156,9 @@ while True:
                 w.flush()
             else:
                 print("操作取消")
+
+    elif i==":U":
+        s=popen(input('打开的命令&参数')+" "+m)
 
     elif i==":PH":
         print(m)
