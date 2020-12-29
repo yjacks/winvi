@@ -10,4 +10,3 @@ Notepad太难用了！    Notepad is not great!
 
 (:P是普通的输出,:PA是带索引输出,:PL是列表方式输出)
 # 1.1之后新版:PA改为:PM
-# 1.1之后新版:U,:LUC暂时消失，之后会和大家重新见面
