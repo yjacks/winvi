@@ -1,14 +1,22 @@
 # 模块导入
-from os import system, name
+from os import system, name, popen
 from os.path import exists, abspath
 from sys import exit, argv
+
+import chardet
+import openpyxl
+from wget import download
+
 # 变量定义
+first_file_open = True
+coding = 'utf8'
 index_c = -1
 system_log = ''
 echo_mode = False
 file_path = []
 l = []
 l1 = []
+l2 = []
 index = -1
 help_text = """
     欢迎使用新的winvi
@@ -22,6 +30,7 @@ help_text = """
             :OX 强制切换文件
             :G 将文件现有内容加载至缓存
             :G1 将目前的修改存放至缓存
+            :G2 将读取的xls文件内容加载至缓存
             :R 清空缓存
             :D 清空文件
             :ECHO>>FILE 使用命令echo xxx >> file 保存文件(追加式)(请使用完成以后使用:G记录)
@@ -34,9 +43,13 @@ help_text = """
             :PU 显示日志
             :MC 将文件指针移至特定字符串下
             :PS 输出字符占字符串的位置
+            :WT 将web上http&s协议的文件下载到本地编辑(以后可能会开发ftp,ssr等协议的在线编辑)
+            :DIR 故名思意
             :EXIT_COMMAND,:EC 退出命令模式
 
     独立指令:
+    :XLSX (测试中)Excel表格读取，不能直接打开，需存放至filepath
+    内容存放至g2,目前只能读取文件表的名称
     :H 输出本帮助（等效－h参数）
     :P 输出文件内容
     :PM 输出文件内容(前加序号)
@@ -65,27 +78,40 @@ elif argv[1] == '-h':
 # 删除开头的“winvi.py”
 argv.pop(0)
 # 如果删除后长度大于１，说明有多个文件
-if len(argv) > 1:
-    for file in argv:
-        file_path.append(file)
-else:
-    file_path.append(argv[0])
-#特殊支持库导入
-import chardet
+for file in argv:
+    file_path.append(file)
 # 预处理结束
 
 file = file_path[0]  # 把文件名弄出来
 if exists(file):
-    t_r = open(file, 'rb')
-    coding = chardet.detect(t_r.read())["encoding"]
-    t_r.close()
+    r = open(file, 'rb')
+    coding = chardet.detect(r.read()).get('encoding')
+    if not coding:
+        coding = 'utf8'
+    r.close()
     r = open(file, 'r', encoding=coding)
     l = r.readlines()
 
 w = open(file, 'w', encoding=coding)
 r = open(file, 'r', encoding=coding)
 
+
+def del_file():
+    return open(file, 'w', encoding=coding)
+
+
+def again_read_file():
+    return open(file, 'r', encoding=coding)
+
+
 while True:
+    if first_file_open:
+        w.writelines(l)
+        first_file_open = False
+    else:
+        w.close()
+        w = del_file()
+        w.writelines(l)
     command = input()
     if command == ":COMMAND" or command == ':CMD':
         print('成功进入COMMAND模式')
@@ -97,7 +123,7 @@ while True:
             elif cmd == ":X":
                 exit()
             elif cmd == ':D':
-                w = open(file, 'w', encoding=coding)
+                w = del_file()
             elif cmd == ':R':
                 l = []
             elif cmd == ":O":
@@ -116,11 +142,16 @@ while True:
                         print("数字过界")
                     file = file_path[use_file]
                     w.writelines(l)
+                    w.flush()
+
                     if exists(file):
-                        r = open(file, 'r', encoding=coding)
+                        r = open(file, 'rb')
+                        coding = chardet.detect(r.read()).get('encoding')
+                        r.close()
+                        r = again_read_file()
                         l = r.readlines()
-                    w = open(file, 'w', encoding=coding)
-                    r = open(file, 'r', encoding=coding)
+                    w = del_file()
+                    r = again_read_file()
                     print("成功切换")
                     continue
             elif cmd == ':OX':
@@ -132,10 +163,13 @@ while True:
                 use_file = int(input())
                 file = file_path[use_file]
                 if exists(file):
-                    r = open(file, 'r', encoding=coding)
+                    r = open(file, 'rb')
+                    coding = chardet.detect(r.read()).get('encoding')
+                    r.close()
+                    r = again_read_file()
                     l = r.readlines()
-                w = open(file, 'w', encoding=coding)
-                r = open(file, 'r', encoding=coding)
+                w = del_file()
+                r = again_read_file()
                 print("成功切换")
                 continue
             elif cmd == ':EXIT_COMMAND' or cmd == ':EC':
@@ -177,17 +211,28 @@ while True:
             elif cmd == ':G':
                 l = r.readlines()
             elif cmd == ':G1':
-                clone_back_input = input('B为还原,C为备份')
+                clone_back_input = input('B为还原,C为备份,其他键为取消')
                 if clone_back_input == 'B':
                     l = l1
                 elif clone_back_input == 'C':
                     l1 = l
+                else:
+                    print('已取消')
+                    continue
+            elif cmd == ':G2':
+                clone_back_input = input('B为还原,其他键为取消')
+                if clone_back_input == 'B':
+                    l = l2
+                else:
+                    print('已取消')
+                    continue
             elif cmd == ':PL':
                 print(l)
             elif cmd == ':U':
-                system_log = system(input('输入指令'))
+                sys_i = input('要使用的命令')
+                system_log = popen(sys_i)
             elif cmd == ':PU':
-                print(system_log)
+                print(system_log.read())
             elif cmd == ':PS':
                 s_b_i = -1
                 s_b_i_i = -1
@@ -210,6 +255,7 @@ while True:
                     str_chr_l = l[index_l]
                 except IndexError:
                     print('索引越界')
+                    continue
                 index = index_l
                 try:
                     index_c = int(input("输入字符索引:"))
@@ -223,6 +269,14 @@ while True:
                     print('索引越界')
                     index_c = -1
                     continue
+            elif cmd == ':WT':
+                web_text_url = input('请输入url:')
+                out_web_text_pathname = input('请输入下载后的文件路径(附名称):')
+                download(url=web_text_url, out=out_web_text_pathname)
+                file_path.append(out_web_text_pathname)
+                print('已经下载完毕,并且加入file_list，序号为'+str(file_path.index(out_web_text_pathname)))
+            elif cmd == ':DIR':
+                system('dir')
 
             else:
                 print('输入非指令')
@@ -234,7 +288,7 @@ while True:
         elif name == 'posix' or name == 'cygwin':
             system('clear')
         else:
-            print('其他环境不支持清屏')
+            print('其他环境不支持清屏,请手动执行命令')
     elif command == ':H':
         print(help_text)
     elif command == ':P':
@@ -245,6 +299,26 @@ while True:
         for back_in in l:
             index_l += 1
             print(str(index_l) + "\t\t\t" + back_in)
+    elif command == ':XLSX':
+        print('请输入文件编号:', end='')
+        try:
+            n_xlsx = int(input(''))
+            p_xlsx = file_path[n_xlsx]
+        except IndexError:
+            print('索引越界')
+            continue
+        except ValueError:
+            print('非数字')
+            continue
+        else:
+            if not exists(p_xlsx):
+                del_file().close()
+            else:
+                xlsx_workbook = openpyxl.load_workbook(p_xlsx)
+                workbook_sheets = xlsx_workbook.sheetnames
+                for wb_sheet_names in workbook_sheets:
+                    l2.append(wb_sheet_names)
+
     else:
         if echo_mode:
             system("echo " + file + " >> " + command)
@@ -253,4 +327,5 @@ while True:
                 l.insert(index, command + "\n")
             else:
                 l.pop(index)
-                l.insert(index, l[index][0:index_c] + command + l[index][index_c:-1] + "\n")
+                l.insert(index, l[index][0:index_c] + \
+                         command + l[index][index_c:-1] + "\n")
